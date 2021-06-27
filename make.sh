@@ -2,12 +2,13 @@
 
 set -o nounset -o errexit -o pipefail
 
+echo "Downloading Changeset file"
 wget -N https://planet.openstreetmap.org/planet/changesets-latest.osm.bz2.torrent
-aria2c --seed-time 0 changesets-latest.osm.bz2.torrent
+aria2c --seed-time 0 --check-integrity changesets-latest.osm.bz2.torrent
+DATE=$(find . -name 'changesets-*.osm.bz2' | sort | tail -n1 | grep -Po "(?<=^changesets-)2\d\d\d\d\d(?=.osm.bz2$)")
 
-
-DATE=$(ls changesets-*.osm.bz2| sort | tail -n1 | grep -Po "(?<=^changesets-)2\d\d\d\d\d(?=.osm.bz2$)")
-osmium cat -f opl changesets-${DATE}.osm.bz2 | pv -s 100M  -l -c -N all | grep -P " T(\S+,)?created_by=Street(%20%)?Complete%20%" | cut -d" " -f1 | cut -c2- | pv -l -c -N out | gzip > ${DATE}-changesets.txt.gz
+echo "Extracting StreetComplete changeset ids"
+osmium cat -f opl "changesets-${DATE}.osm.bz2" | pv -s 100M  -l -c -N "Input" | grep -P " T(\S+,)?created_by=Street(%20%)?Complete%20%" | cut -d" " -f1 | cut -c2- | pv -l -c -N "Num. output changesets" | gzip > "${DATE}-changesets.txt.gz"
 
 osm-tag-csv-history -i ireland-and-northern-ireland-internal.osh.pbf -o ie-tags.csv.gz -v
 
